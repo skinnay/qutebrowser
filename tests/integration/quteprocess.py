@@ -30,7 +30,7 @@ import collections
 import pytest
 from PyQt5.QtCore import pyqtSignal
 
-from tests.integration import testprocess  # pylint: disable=import-error
+import testprocess  # pylint: disable=import-error
 from qutebrowser.misc import ipc
 
 
