@@ -37,6 +37,11 @@ class ProcessExited(Exception):
     pass
 
 
+class WaitForTimeout(Exception):
+
+    """Raised when wait_for didn't get the expected message."""
+
+
 class Process(QObject):
 
     """Abstraction over a running test subprocess process.
@@ -146,3 +151,25 @@ class Process(QObject):
     def is_running(self):
         """Check if the process is currently running."""
         return self.proc.state() == QProcess.Running
+
+    def wait_for(self, timeout=5000, **kwargs):
+        # FIXME make this a context manager which inserts a marker in
+        # self._data in __enter__ and checks if the signal already did arrive
+        # after marker in __exit__, and if not, waits?
+
+        spy = QSignalSpy(self.new_data)
+        elapsed_timer = QElapsedTimer()
+        elapsed_timer.start()
+
+        while True:
+            got_signal = spy.wait(timeout)
+            if got_signal:
+                assert len(spy) == 1
+                assert len(spy[0]) == 1
+                line = spy[0][0]
+                if all(getattr(line, key) == value
+                       for key, value in kwargs.items()):
+                    return
+
+            if not got_signal or elapsed_timer.hasExpired(timeout):
+                raise WaitForTimeout
