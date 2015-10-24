@@ -17,9 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with qutebrowser.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+
 import pytest_bdd as bdd
 
-bdd.scenarios('.')
+
+if not hasattr(sys, 'frozen'):
+    bdd.scenarios('.')
 
 
 @bdd.given(bdd.parsers.parse("I set {sect} -> {opt} to {value}"))
