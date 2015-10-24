@@ -126,8 +126,8 @@ class QuteProc(testprocess.Process):
 
     def _executable_args(self):
         if hasattr(sys, 'frozen'):
-            executable = [os.path.join(os.path.dirname(sys.executable),
-                                       'qutebrowser')]
+            executable = os.path.join(os.path.dirname(sys.executable),
+                                      'qutebrowser')
             args = []
         else:
             executable = sys.executable
