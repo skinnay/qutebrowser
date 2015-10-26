@@ -53,11 +53,15 @@ class LogLine:
     """, re.VERBOSE)
 
     def __init__(self, line):
+        self._line = line
         match = self.LOG_RE.match(line)
         if match is None:
             raise NoLineMatch(line)
         self.__dict__.update(match.groupdict())
         self.expected = False
+
+    def __repr__(self):
+        return 'LogLine({!r})'.format(self._line)
 
 
 class QuteProc(testprocess.Process):
