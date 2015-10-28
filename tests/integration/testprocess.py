@@ -20,7 +20,8 @@
 """Base class for a subprocess run for tests.."""
 
 import pytestqt.plugin  # pylint: disable=import-error
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QProcess, QObject
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QProcess, QObject, QElapsedTimer
+from PyQt5.QtTest import QSignalSpy
 
 
 class InvalidLine(Exception):
