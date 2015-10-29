@@ -20,6 +20,8 @@
 """Test testprocess.Process."""
 
 import sys
+import contextlib
+import datetime
 
 import pytest
 from PyQt5.QtCore import QProcess
@@ -27,6 +29,21 @@ from PyQt5.QtCore import QProcess
 import testprocess
 
 pytestmark = [pytest.mark.not_frozen]
+
+
+@contextlib.contextmanager
+def stopwatch(min_ms=None, max_ms=None):
+    if min_ms is None and max_ms is None:
+        raise ValueError("Using stopwatch with both min_ms/max_ms None does "
+                         "nothing.")
+    start = datetime.datetime.now()
+    yield
+    stop = datetime.datetime.now()
+    delta_ms = (stop - start).total_seconds() * 1000
+    if min_ms is not None:
+        assert delta_ms >= min_ms
+    if max_ms is not None:
+        assert delta_ms <= max_ms
 
 
 class Line:
@@ -54,17 +71,42 @@ class PythonProcess(testprocess.Process):
         return Line(line)
 
     def _executable_args(self):
-        return (sys.executable, ['-c', 'import sys; print("ready"); sys.stdout.flush(); ' + self.code])
+        code = [
+            'import sys, time',
+            'print("ready")',
+            'sys.stdout.flush()',
+            self.code,
+            'sys.stdout.flush()',
+            'time.sleep(20)',
+        ]
+        return (sys.executable, ['-c', ';'.join(code)])
 
 
-@pytest.yield_fixture
-def pyproc():
-    proc = PythonProcess()
-    yield proc
-    proc.terminate()
+class TestWaitFor:
 
+    @pytest.yield_fixture
+    def pyproc(self):
+        proc = PythonProcess()
+        yield proc
+        proc.terminate()
 
-def test_wait_for(pyproc):
-    pyproc.code = "import time; time.sleep(0.5); print('foobar')"
-    pyproc.start()
-    pyproc.wait_for(data="foobar")
+    def test_successful(self, pyproc):
+        """Using wait_for with the expected text."""
+        pyproc.code = "import time; time.sleep(0.5); print('foobar')"
+        pyproc.start()
+        with stopwatch(min_ms=500):
+            pyproc.wait_for(data="foobar")
+
+    def test_other_text(self, pyproc):
+        """Test wait_for when getting some unrelated text."""
+        pyproc.code = "import time; time.sleep(0.1); print('blahblah')"
+        pyproc.start()
+        with pytest.raises(testprocess.WaitForTimeout):
+            pyproc.wait_for(data="foobar", timeout=500)
+
+    def test_no_text(self, pyproc):
+        """Test wait_for when getting no text at all."""
+        pyproc.code = "pass"
+        pyproc.start()
+        with pytest.raises(testprocess.WaitForTimeout):
+            pyproc.wait_for(data="foobar", timeout=100)
